@@ -1,85 +1,141 @@
-import { EmployeeForm } from '@/components/payroll/EmployeeForm';
-import { GajiKaryawanSlipForm } from '@/components/payroll/GajiKaryawanSlipForm';
+import { EmployeeForm } from '@/components/payroll/employee-form';
+import { GajiKaryawanSlipForm } from '@/components/payroll/gaji-karyawan-slip-form';
 import { DataTable } from '@/components/shared/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
+import AppLayout from '@/layouts/app-layout';
 import { formatCurrency, formatPeriod } from '@/lib/formatters';
-import {
-    Employee,
-    employeeRepository,
-} from '@/lib/repositories/employeeRepository';
-import {
-    GajiKaryawanRepository,
-    GajiKaryawanSlip,
-} from '@/lib/repositories/gajiKaryawanRepository';
+import gajiKaryawan from '@/routes/gaji-karyawan';
+import karyawan from '@/routes/karyawan';
+import slipGaji from '@/routes/slip-gaji';
+import { BreadcrumbItem } from '@/types';
+import { Head, router } from '@inertiajs/react';
 import { Edit2, FileText, Plus, Trash2, Users } from 'lucide-react';
 import { useState } from 'react';
 
-export default function GajiKaryawan() {
-    const [employees, setEmployees] = useState<Employee[]>(() =>
-        employeeRepository.getAll(),
-    );
-    const [GajiKaryawans, setGajiKaryawans] = useState<GajiKaryawanSlip[]>(() =>
-        GajiKaryawanRepository.getAll(),
-    );
+interface Employee {
+    id: number;
+    nama: string;
+    jabatan: string;
+    tipe_gaji: 'tetap' | 'harian';
+    gaji_pokok: number;
+    created_at: string;
+    updated_at: string;
+}
+
+interface SlipGaji {
+    id: number;
+    karyawan_id: number;
+    nama_karyawan: string;
+    jabatan: string;
+    periode: string;
+    gaji_pokok: number;
+    tunjangan: number;
+    potongan: number;
+    gaji_bersih: number;
+    created_at: string;
+    updated_at: string;
+}
+
+interface Props {
+    karyawan: Employee[];
+    slipGaji: SlipGaji[];
+}
+
+const breadcrumbs: BreadcrumbItem[] = [
+    {
+        title: 'Gaji Karyawan',
+        href: gajiKaryawan.index().url,
+    },
+];
+
+export default function GajiKaryawan({
+    karyawan: initialKaryawan,
+    slipGaji: initialSlipGaji,
+}: Props) {
     const [employeeFormOpen, setEmployeeFormOpen] = useState(false);
     const [GajiKaryawanFormOpen, setGajiKaryawanFormOpen] = useState(false);
     const [editingEmployee, setEditingEmployee] = useState<
         Employee | undefined
     >();
 
-    const loadData = () => {
-        setEmployees(employeeRepository.getAll());
-        setGajiKaryawans(GajiKaryawanRepository.getAll());
-    };
-
-    const handleEmployeeSubmit = (data: Omit<Employee, 'id' | 'createdAt'>) => {
+    const handleEmployeeSubmit = (data: {
+        nama: string;
+        jabatan: string;
+        tipe_gaji: 'tetap' | 'harian';
+        gaji_pokok: number;
+    }) => {
         if (editingEmployee) {
-            employeeRepository.update(editingEmployee.id, data);
-            toast({
-                title: 'Berhasil',
-                description: 'Data karyawan berhasil diperbarui',
+            router.put(karyawan.update(editingEmployee.id).url, data, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setEmployeeFormOpen(false);
+                    setEditingEmployee(undefined);
+                    toast({
+                        title: 'Berhasil',
+                        description: 'Data karyawan berhasil diperbarui',
+                    });
+                },
             });
         } else {
-            employeeRepository.create(data);
-            toast({
-                title: 'Berhasil',
-                description: 'Karyawan berhasil ditambahkan',
+            router.post(karyawan.store().url, data, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setEmployeeFormOpen(false);
+                    toast({
+                        title: 'Berhasil',
+                        description: 'Karyawan berhasil ditambahkan',
+                    });
+                },
             });
         }
-        loadData();
-        setEditingEmployee(undefined);
     };
 
-    const handleGajiKaryawanSubmit = (
-        data: Omit<GajiKaryawanSlip, 'id' | 'createdAt'>,
-    ) => {
-        GajiKaryawanRepository.create(data);
-        toast({ title: 'Berhasil', description: 'Slip gaji berhasil dibuat' });
-        loadData();
+    const handleGajiKaryawanSubmit = (data: {
+        karyawan_id: number;
+        periode: string;
+        gaji_pokok: number;
+        gaji_bersih: number;
+    }) => {
+        router.post(slipGaji.store().url, data, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setGajiKaryawanFormOpen(false);
+                toast({
+                    title: 'Berhasil',
+                    description: 'Slip gaji berhasil dibuat',
+                });
+            },
+        });
     };
 
-    const handleDeleteEmployee = (id: string) => {
+    const handleDeleteEmployee = (id: number) => {
         if (confirm('Apakah Anda yakin ingin menghapus karyawan ini?')) {
-            employeeRepository.delete(id);
-            toast({
-                title: 'Berhasil',
-                description: 'Karyawan berhasil dihapus',
+            router.delete(karyawan.destroy(id).url, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast({
+                        title: 'Berhasil',
+                        description: 'Karyawan berhasil dihapus',
+                    });
+                },
             });
-            loadData();
         }
     };
 
-    const handleDeleteGajiKaryawan = (id: string) => {
+    const handleDeleteGajiKaryawan = (id: number) => {
         if (confirm('Apakah Anda yakin ingin menghapus slip gaji ini?')) {
-            GajiKaryawanRepository.delete(id);
-            toast({
-                title: 'Berhasil',
-                description: 'Slip gaji berhasil dihapus',
+            router.delete(slipGaji.destroy(id).url, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast({
+                        title: 'Berhasil',
+                        description: 'Slip gaji berhasil dihapus',
+                    });
+                },
             });
-            loadData();
         }
     };
 
@@ -89,23 +145,23 @@ export default function GajiKaryawan() {
     };
 
     const employeeColumns = [
-        { key: 'name', header: 'Nama' },
-        { key: 'position', header: 'Jabatan' },
+        { key: 'nama', header: 'Nama' },
+        { key: 'jabatan', header: 'Jabatan' },
         {
-            key: 'salaryType',
+            key: 'tipe_gaji',
             header: 'Tipe Gaji',
             render: (e: Employee) => (
                 <Badge variant="outline">
-                    {e.salaryType === 'fixed' ? 'Tetap' : 'Harian'}
+                    {e.tipe_gaji === 'tetap' ? 'Tetap' : 'Harian'}
                 </Badge>
             ),
         },
         {
-            key: 'baseSalary',
-            header: 'Gaji Pokok',
+            key: 'gaji_pokok',
+            header: 'Gaji',
             render: (e: Employee) => (
                 <span className="font-medium">
-                    {formatCurrency(e.baseSalary)}
+                    {formatCurrency(e.gaji_pokok)}
                 </span>
             ),
         },
@@ -135,48 +191,25 @@ export default function GajiKaryawan() {
 
     const GajiKaryawanColumns = [
         {
-            key: 'period',
+            key: 'periode',
             header: 'Periode',
-            render: (p: GajiKaryawanSlip) => formatPeriod(p.period),
+            render: (p: SlipGaji) => formatPeriod(p.periode),
         },
-        { key: 'employeeName', header: 'Nama Karyawan' },
-        { key: 'position', header: 'Jabatan' },
+        { key: 'nama_karyawan', header: 'Nama Karyawan' },
+        { key: 'jabatan', header: 'Jabatan' },
         {
-            key: 'baseSalary',
-            header: 'Gaji Pokok',
-            render: (p: GajiKaryawanSlip) => formatCurrency(p.baseSalary),
-        },
-        {
-            key: 'allowance',
-            header: 'Tunjangan',
-            render: (p: GajiKaryawanSlip) => (
-                <span className="text-success">
-                    {formatCurrency(p.allowance)}
-                </span>
-            ),
-        },
-        {
-            key: 'deduction',
-            header: 'Potongan',
-            render: (p: GajiKaryawanSlip) => (
-                <span className="text-destructive">
-                    {formatCurrency(p.deduction)}
-                </span>
-            ),
-        },
-        {
-            key: 'netSalary',
-            header: 'Gaji Bersih',
-            render: (p: GajiKaryawanSlip) => (
-                <span className="font-bold text-accent">
-                    {formatCurrency(p.netSalary)}
+            key: 'gaji_bersih',
+            header: 'Gaji',
+            render: (p: SlipGaji) => (
+                <span className="font-semibold">
+                    {formatCurrency(p.gaji_bersih)}
                 </span>
             ),
         },
         {
             key: 'actions',
             header: 'Aksi',
-            render: (p: GajiKaryawanSlip) => (
+            render: (p: SlipGaji) => (
                 <Button
                     variant="ghost"
                     size="icon"
@@ -188,125 +221,134 @@ export default function GajiKaryawan() {
         },
     ];
 
-    const totalGajiKaryawan = GajiKaryawans.reduce(
-        (sum, p) => sum + p.netSalary,
+    const totalGajiKaryawan = initialSlipGaji.reduce(
+        (sum, p) => sum + (Number(p.gaji_bersih) || 0),
         0,
     );
 
     return (
-        <div className="animate-fade-in space-y-6">
-            <div>
-                <h1 className="page-header">GajiKaryawan</h1>
-                <p className="mt-1 text-muted-foreground">
-                    Kelola data karyawan dan penggajian
-                </p>
+        <AppLayout breadcrumbs={breadcrumbs}>
+            <Head title="Gaji Karyawan" />
+            <div className="animate-fade-in space-y-6">
+                <div>
+                    <h1 className="page-header">Gaji Karyawan</h1>
+                    <p className="mt-1 text-muted-foreground">
+                        Kelola data karyawan dan penggajian
+                    </p>
+                </div>
+
+                {/* Summary Cards */}
+                <div className="grid gap-4 md:grid-cols-3">
+                    <div className="rounded-lg border border-border bg-card p-4">
+                        <div className="flex items-center gap-3">
+                            <div className="rounded-lg bg-primary/10 p-2">
+                                <Users className="h-5 w-5 text-primary" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-muted-foreground">
+                                    Total Karyawan
+                                </p>
+                                <p className="text-xl font-bold">
+                                    {initialKaryawan.length}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="rounded-lg border border-border bg-card p-4">
+                        <div className="flex items-center gap-3">
+                            <div className="rounded-lg bg-blue-500/10 p-2">
+                                <FileText className="h-5 w-5 text-blue-900" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-muted-foreground">
+                                    Total Slip Gaji
+                                </p>
+                                <p className="text-xl font-bold">
+                                    {initialSlipGaji.length}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="rounded-lg border border-border bg-card p-4">
+                        <div className="flex items-center gap-3">
+                            <div className="rounded-lg bg-success/10 p-2">
+                                <FileText className="h-5 w-5 text-success" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-muted-foreground">
+                                    Total Pengeluaran Gaji
+                                </p>
+                                <p className="text-xl font-bold text-success">
+                                    {formatCurrency(totalGajiKaryawan)}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <Tabs defaultValue="employees" className="space-y-6">
+                    <TabsList className="grid w-full max-w-md grid-cols-2">
+                        <TabsTrigger value="employees">
+                            Daftar Karyawan
+                        </TabsTrigger>
+                        <TabsTrigger value="GajiKaryawans">
+                            Slip Gaji
+                        </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="employees" className="space-y-4">
+                        <div className="flex justify-end">
+                            <Button
+                                onClick={() => {
+                                    setEditingEmployee(undefined);
+                                    setEmployeeFormOpen(true);
+                                }}
+                            >
+                                <Plus className="mr-2 h-4 w-4" />
+                                Tambah Karyawan
+                            </Button>
+                        </div>
+                        <DataTable<Employee>
+                            columns={employeeColumns}
+                            data={initialKaryawan}
+                            emptyMessage="Tidak ada data karyawan"
+                        />
+                    </TabsContent>
+
+                    <TabsContent value="GajiKaryawans" className="space-y-4">
+                        <div className="flex justify-end">
+                            <Button
+                                onClick={() => setGajiKaryawanFormOpen(true)}
+                            >
+                                <Plus className="mr-2 h-4 w-4" />
+                                Buat Slip Gaji
+                            </Button>
+                        </div>
+                        <DataTable<SlipGaji>
+                            columns={GajiKaryawanColumns}
+                            data={initialSlipGaji.sort((a, b) =>
+                                b.periode.localeCompare(a.periode),
+                            )}
+                            emptyMessage="Tidak ada slip gaji"
+                        />
+                    </TabsContent>
+                </Tabs>
+
+                {/* Forms */}
+                <EmployeeForm
+                    open={employeeFormOpen}
+                    onOpenChange={setEmployeeFormOpen}
+                    onSubmit={handleEmployeeSubmit}
+                    initialData={editingEmployee}
+                />
+
+                <GajiKaryawanSlipForm
+                    open={GajiKaryawanFormOpen}
+                    onOpenChange={setGajiKaryawanFormOpen}
+                    onSubmit={handleGajiKaryawanSubmit}
+                    employees={initialKaryawan}
+                />
             </div>
-
-            {/* Summary Cards */}
-            <div className="grid gap-4 md:grid-cols-3">
-                <div className="rounded-lg border border-border bg-card p-4">
-                    <div className="flex items-center gap-3">
-                        <div className="rounded-lg bg-primary/10 p-2">
-                            <Users className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-muted-foreground">
-                                Total Karyawan
-                            </p>
-                            <p className="text-xl font-bold">
-                                {employees.length}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                <div className="rounded-lg border border-border bg-card p-4">
-                    <div className="flex items-center gap-3">
-                        <div className="rounded-lg bg-accent/10 p-2">
-                            <FileText className="h-5 w-5 text-accent" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-muted-foreground">
-                                Total Slip Gaji
-                            </p>
-                            <p className="text-xl font-bold">
-                                {GajiKaryawans.length}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                <div className="rounded-lg border border-border bg-card p-4">
-                    <div className="flex items-center gap-3">
-                        <div className="bg-success/10 rounded-lg p-2">
-                            <FileText className="text-success h-5 w-5" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-muted-foreground">
-                                Total Pengeluaran Gaji
-                            </p>
-                            <p className="text-success text-xl font-bold">
-                                {formatCurrency(totalGajiKaryawan)}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <Tabs defaultValue="employees" className="space-y-6">
-                <TabsList className="grid w-full max-w-md grid-cols-2">
-                    <TabsTrigger value="employees">Daftar Karyawan</TabsTrigger>
-                    <TabsTrigger value="GajiKaryawans">Slip Gaji</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="employees" className="space-y-4">
-                    <div className="flex justify-end">
-                        <Button
-                            onClick={() => {
-                                setEditingEmployee(undefined);
-                                setEmployeeFormOpen(true);
-                            }}
-                        >
-                            <Plus className="mr-2 h-4 w-4" />
-                            Tambah Karyawan
-                        </Button>
-                    </div>
-                    <DataTable
-                        columns={employeeColumns}
-                        data={employees}
-                        emptyMessage="Tidak ada data karyawan"
-                    />
-                </TabsContent>
-
-                <TabsContent value="GajiKaryawans" className="space-y-4">
-                    <div className="flex justify-end">
-                        <Button onClick={() => setGajiKaryawanFormOpen(true)}>
-                            <Plus className="mr-2 h-4 w-4" />
-                            Buat Slip Gaji
-                        </Button>
-                    </div>
-                    <DataTable
-                        columns={GajiKaryawanColumns}
-                        data={GajiKaryawans.sort((a, b) =>
-                            b.period.localeCompare(a.period),
-                        )}
-                        emptyMessage="Tidak ada slip gaji"
-                    />
-                </TabsContent>
-            </Tabs>
-
-            {/* Forms */}
-            <EmployeeForm
-                open={employeeFormOpen}
-                onOpenChange={setEmployeeFormOpen}
-                onSubmit={handleEmployeeSubmit}
-                initialData={editingEmployee}
-            />
-
-            <GajiKaryawanSlipForm
-                open={GajiKaryawanFormOpen}
-                onOpenChange={setGajiKaryawanFormOpen}
-                onSubmit={handleGajiKaryawanSubmit}
-                employees={employees}
-            />
-        </div>
+        </AppLayout>
     );
 }

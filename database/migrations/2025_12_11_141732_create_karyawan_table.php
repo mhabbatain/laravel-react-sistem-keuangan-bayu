@@ -11,13 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('transaksi', function (Blueprint $table) {
+        Schema::create('karyawan', function (Blueprint $table) {
             $table->id();
-            $table->date('tanggal');
-            $table->string('kategori');
-            $table->text('deskripsi');
-            $table->decimal('jumlah', 15, 2);
-            $table->enum('tipe', ['pemasukan', 'pengeluaran']);
+            $table->string('nama');
+            $table->string('jabatan');
+            $table->enum('tipe_gaji', ['tetap', 'harian']);
+            $table->decimal('gaji_pokok', 15, 2);
             $table->timestamps();
         });
     }
@@ -27,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('transaksi');
+        Schema::dropIfExists('karyawan');
     }
 };

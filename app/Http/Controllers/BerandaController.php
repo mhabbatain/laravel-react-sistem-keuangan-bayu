@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Transaksi;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -12,7 +13,13 @@ class BerandaController extends Controller
      */
     public function index()
     {
-        return Inertia::render('beranda');
+        $transactions = Transaksi::orderBy('tanggal', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return Inertia::render('beranda', [
+            'transactions' => $transactions,
+        ]);
     }
 
     /**

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Transaksi;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class TransaksiController extends Controller
 {
@@ -13,15 +14,13 @@ class TransaksiController extends Controller
      */
     public function index()
     {
-        //
-    }
+        $transactions = Transaksi::orderBy('tanggal', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->get();
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
+        return Inertia::render('transaksi', [
+            'transactions' => $transactions,
+        ]);
     }
 
     /**
@@ -29,23 +28,18 @@ class TransaksiController extends Controller
      */
     public function store(Request $request)
     {
-        //
-    }
+        $validated = $request->validate([
+            'tanggal' => 'required|date',
+            'kategori' => 'required|string|max:255',
+            'deskripsi' => 'required|string',
+            'jumlah' => 'required|numeric|min:0',
+            'tipe' => 'required|in:pemasukan,pengeluaran',
+        ]);
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Transaksi $transaksi)
-    {
-        //
-    }
+        Transaksi::create($validated);
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Transaksi $transaksi)
-    {
-        //
+        return redirect()->route('transaksi.index')
+            ->with('success', 'Transaksi berhasil ditambahkan');
     }
 
     /**
@@ -53,7 +47,18 @@ class TransaksiController extends Controller
      */
     public function update(Request $request, Transaksi $transaksi)
     {
-        //
+        $validated = $request->validate([
+            'tanggal' => 'required|date',
+            'kategori' => 'required|string|max:255',
+            'deskripsi' => 'required|string',
+            'jumlah' => 'required|numeric|min:0',
+            'tipe' => 'required|in:pemasukan,pengeluaran',
+        ]);
+
+        $transaksi->update($validated);
+
+        return redirect()->route('transaksi.index')
+            ->with('success', 'Transaksi berhasil diperbarui');
     }
 
     /**
@@ -61,6 +66,9 @@ class TransaksiController extends Controller
      */
     public function destroy(Transaksi $transaksi)
     {
-        //
+        $transaksi->delete();
+
+        return redirect()->route('transaksi.index')
+            ->with('success', 'Transaksi berhasil dihapus');
     }
 }

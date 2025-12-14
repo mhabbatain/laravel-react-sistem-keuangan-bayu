@@ -10,7 +10,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { beranda, bukuKas, laba } from '@/routes';
+import { beranda, laba, laporanKeuangan } from '@/routes';
 import gajiKaryawan from '@/routes/gaji-karyawan';
 import transaksi from '@/routes/transaksi';
 import { type NavItem } from '@/types';
@@ -42,8 +42,8 @@ const mainNavItems: NavItem[] = [
         icon: TrendingUp,
     },
     {
-        title: 'Buku Kas',
-        href: bukuKas(),
+        title: 'Laporan Keuangan',
+        href: laporanKeuangan(),
         icon: BookOpen,
     },
     {

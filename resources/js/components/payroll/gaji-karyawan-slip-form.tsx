@@ -15,14 +15,27 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { formatCurrency, getCurrentPeriod } from '@/lib/formatters';
-import { Employee } from '@/lib/repositories/employeeRepository';
-import { GajiKaryawanSlip } from '@/lib/repositories/gajiKaryawanRepository';
 import { useState } from 'react';
+
+interface Employee {
+    id: number;
+    nama: string;
+    jabatan: string;
+    tipe_gaji: 'tetap' | 'harian';
+    gaji_pokok: number;
+    created_at: string;
+    updated_at: string;
+}
 
 interface GajiKaryawanSlipFormProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onSubmit: (data: Omit<GajiKaryawanSlip, 'id' | 'createdAt'>) => void;
+    onSubmit: (data: {
+        karyawan_id: number;
+        periode: string;
+        gaji_pokok: number;
+        gaji_bersih: number;
+    }) => void;
     employees: Employee[];
 }
 
@@ -34,22 +47,16 @@ export function GajiKaryawanSlipForm({
 }: GajiKaryawanSlipFormProps) {
     const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
     const [period, setPeriod] = useState(getCurrentPeriod());
-    const [allowance, setAllowance] = useState('0');
-    const [deduction, setDeduction] = useState('0');
 
-    const selectedEmployee = employees.find((e) => e.id === selectedEmployeeId);
-    const baseSalary = selectedEmployee?.baseSalary || 0;
-    const netSalary =
-        baseSalary +
-        parseFloat(allowance || '0') -
-        parseFloat(deduction || '0');
+    const selectedEmployee = employees.find(
+        (e) => e.id.toString() === selectedEmployeeId,
+    );
+    const baseSalary = selectedEmployee?.gaji_pokok || 0;
 
     const handleOpenChange = (newOpen: boolean) => {
         if (!newOpen) {
             setSelectedEmployeeId('');
             setPeriod(getCurrentPeriod());
-            setAllowance('0');
-            setDeduction('0');
         }
         onOpenChange(newOpen);
     };
@@ -59,14 +66,10 @@ export function GajiKaryawanSlipForm({
         if (!selectedEmployee) return;
 
         onSubmit({
-            employeeId: selectedEmployee.id,
-            employeeName: selectedEmployee.name,
-            position: selectedEmployee.position,
-            period,
-            baseSalary: selectedEmployee.baseSalary,
-            allowance: parseFloat(allowance || '0'),
-            deduction: parseFloat(deduction || '0'),
-            netSalary,
+            karyawan_id: selectedEmployee.id,
+            periode: period,
+            gaji_pokok: selectedEmployee.gaji_pokok,
+            gaji_bersih: selectedEmployee.gaji_pokok,
         });
         handleOpenChange(false);
     };
@@ -89,8 +92,11 @@ export function GajiKaryawanSlipForm({
                             </SelectTrigger>
                             <SelectContent>
                                 {employees.map((emp) => (
-                                    <SelectItem key={emp.id} value={emp.id}>
-                                        {emp.name} - {emp.position}
+                                    <SelectItem
+                                        key={emp.id}
+                                        value={emp.id.toString()}
+                                    >
+                                        {emp.nama} - {emp.jabatan}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -109,50 +115,15 @@ export function GajiKaryawanSlipForm({
                     </div>
 
                     {selectedEmployee && (
-                        <div className="space-y-2 rounded-lg bg-muted p-4">
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">
-                                    Gaji Pokok
-                                </span>
-                                <span className="font-medium">
+                        <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                            <div className="flex items-center justify-between">
+                                <span className="font-medium">Gaji Bersih</span>
+                                <span className="text-xl font-bold text-primary">
                                     {formatCurrency(baseSalary)}
                                 </span>
                             </div>
                         </div>
                     )}
-
-                    <div className="space-y-2">
-                        <Label htmlFor="allowance">Tunjangan (Rp)</Label>
-                        <Input
-                            id="allowance"
-                            type="number"
-                            value={allowance}
-                            onChange={(e) => setAllowance(e.target.value)}
-                            placeholder="0"
-                            min="0"
-                        />
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label htmlFor="deduction">Potongan (Rp)</Label>
-                        <Input
-                            id="deduction"
-                            type="number"
-                            value={deduction}
-                            onChange={(e) => setDeduction(e.target.value)}
-                            placeholder="0"
-                            min="0"
-                        />
-                    </div>
-
-                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-                        <div className="flex items-center justify-between">
-                            <span className="font-medium">Gaji Bersih</span>
-                            <span className="text-xl font-bold text-primary">
-                                {formatCurrency(netSalary)}
-                            </span>
-                        </div>
-                    </div>
                     <div className="flex gap-3 pt-4">
                         <Button
                             type="button"

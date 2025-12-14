@@ -9,12 +9,26 @@ import {
 } from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
 import { formatCurrency, getDateRangeForPeriod } from '@/lib/formatters';
-import { transactionRepository } from '@/lib/repositories/transactionRepository';
 import { laba } from '@/routes';
 import { BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
 import { DollarSign, TrendingDown, TrendingUp } from 'lucide-react';
 import { useMemo, useState } from 'react';
+
+interface Transaction {
+    id: number;
+    tanggal: string;
+    kategori: string;
+    deskripsi: string;
+    jumlah: number;
+    tipe: 'pemasukan' | 'pengeluaran';
+    created_at: string;
+    updated_at: string;
+}
+
+interface Props {
+    transactions: Transaction[];
+}
 
 type PeriodType = 'daily' | 'monthly' | 'yearly';
 
@@ -24,7 +38,8 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: laba().url,
     },
 ];
-export default function ProfitLoss() {
+
+export default function Laba({ transactions }: Props) {
     const [periodType, setPeriodType] = useState<PeriodType>('monthly');
     const [selectedDate, setSelectedDate] = useState(
         new Date().toISOString().split('T')[0],
@@ -33,19 +48,25 @@ export default function ProfitLoss() {
     const filteredTransactions = useMemo(() => {
         const date = new Date(selectedDate);
         const range = getDateRangeForPeriod(periodType, date);
-        return transactionRepository.getByDateRange(range.start, range.end);
-    }, [periodType, selectedDate]);
+
+        return transactions.filter((t) => {
+            const transactionDate = new Date(t.tanggal);
+            const startDate = new Date(range.start);
+            const endDate = new Date(range.end);
+            return transactionDate >= startDate && transactionDate <= endDate;
+        });
+    }, [transactions, periodType, selectedDate]);
 
     const revenue = useMemo(() => {
         return filteredTransactions
-            .filter((t) => t.type === 'income' && t.category === 'pendapatan')
-            .reduce((sum, t) => sum + t.amount, 0);
+            .filter((t) => t.tipe === 'pemasukan')
+            .reduce((sum, t) => sum + Number(t.jumlah), 0);
     }, [filteredTransactions]);
 
     const costs = useMemo(() => {
         return filteredTransactions
-            .filter((t) => t.type === 'expense' && t.category === 'biaya')
-            .reduce((sum, t) => sum + t.amount, 0);
+            .filter((t) => t.tipe === 'pengeluaran')
+            .reduce((sum, t) => sum + Number(t.jumlah), 0);
     }, [filteredTransactions]);
 
     const profit = revenue - costs;
@@ -54,9 +75,10 @@ export default function ProfitLoss() {
     const incomeBreakdown = useMemo(() => {
         const breakdown: Record<string, number> = {};
         filteredTransactions
-            .filter((t) => t.type === 'income')
+            .filter((t) => t.tipe === 'pemasukan')
             .forEach((t) => {
-                breakdown[t.category] = (breakdown[t.category] || 0) + t.amount;
+                breakdown[t.kategori] =
+                    (breakdown[t.kategori] || 0) + Number(t.jumlah);
             });
         return Object.entries(breakdown).sort((a, b) => b[1] - a[1]);
     }, [filteredTransactions]);
@@ -64,16 +86,17 @@ export default function ProfitLoss() {
     const expenseBreakdown = useMemo(() => {
         const breakdown: Record<string, number> = {};
         filteredTransactions
-            .filter((t) => t.type === 'expense')
+            .filter((t) => t.tipe === 'pengeluaran')
             .forEach((t) => {
-                breakdown[t.category] = (breakdown[t.category] || 0) + t.amount;
+                breakdown[t.kategori] =
+                    (breakdown[t.kategori] || 0) + Number(t.jumlah);
             });
         return Object.entries(breakdown).sort((a, b) => b[1] - a[1]);
     }, [filteredTransactions]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Buku Kas" />
+            <Head title="Laporan Laba Rugi" />
             <div className="animate-fade-in space-y-6">
                 <div>
                     <h1 className="page-header">Laporan Laba Rugi</h1>
@@ -137,14 +160,14 @@ export default function ProfitLoss() {
                         <div className="flex items-start justify-between">
                             <div>
                                 <p className="text-sm font-medium text-muted-foreground">
-                                    Pendapatan
+                                    Pemasukan
                                 </p>
                                 <p className="mt-2 text-2xl font-bold text-foreground">
                                     {formatCurrency(revenue)}
                                 </p>
                             </div>
-                            <div className="bg-success/10 rounded-lg p-2">
-                                <TrendingUp className="text-success h-5 w-5" />
+                            <div className="rounded-lg bg-success/10 p-2">
+                                <TrendingUp className="h-5 w-5 text-success" />
                             </div>
                         </div>
                     </div>
@@ -153,7 +176,7 @@ export default function ProfitLoss() {
                         <div className="flex items-start justify-between">
                             <div>
                                 <p className="text-sm font-medium text-muted-foreground">
-                                    Biaya
+                                    Pengeluaran
                                 </p>
                                 <p className="mt-2 text-2xl font-bold text-foreground">
                                     {formatCurrency(costs)}
@@ -170,11 +193,9 @@ export default function ProfitLoss() {
                     >
                         <div className="flex items-start justify-between">
                             <div>
-                                <p className="text-sm font-medium text-muted-foreground">
-                                    Laba/Rugi
-                                </p>
+                                <p className="text-sm font-medium">Laba/Rugi</p>
                                 <p
-                                    className={`mt-2 text-2xl font-bold ${profit >= 0 ? 'text-accent' : 'text-destructive'}`}
+                                    className={`mt-2 text-2xl font-bold ${profit >= 0 ? 'text-black' : 'text-destructive'}`}
                                 >
                                     {formatCurrency(profit)}
                                 </p>
@@ -214,7 +235,7 @@ export default function ProfitLoss() {
                                         <span className="text-muted-foreground capitalize">
                                             {category}
                                         </span>
-                                        <span className="text-success font-medium">
+                                        <span className="font-medium text-success">
                                             {formatCurrency(amount)}
                                         </span>
                                     </div>
@@ -223,7 +244,7 @@ export default function ProfitLoss() {
                                     <span className="font-semibold">
                                         Total Pendapatan
                                     </span>
-                                    <span className="text-success font-bold">
+                                    <span className="font-bold text-success">
                                         {formatCurrency(revenue)}
                                     </span>
                                 </div>

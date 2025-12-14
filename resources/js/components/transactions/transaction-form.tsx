@@ -14,21 +14,32 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Transaction } from '@/lib/repositories/transactionRepository';
 import { useState } from 'react';
+
+interface Transaction {
+    id: number;
+    tanggal: string;
+    kategori: string;
+    deskripsi: string;
+    jumlah: number;
+    tipe: 'pemasukan' | 'pengeluaran';
+    created_at: string;
+    updated_at: string;
+}
 
 interface TransactionFormProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onSubmit: (data: Omit<Transaction, 'id' | 'createdAt'>) => void;
+    onSubmit: (
+        data: Omit<Transaction, 'id' | 'created_at' | 'updated_at'>,
+    ) => void;
     initialData?: Transaction;
 }
 
 const categories = [
     { value: 'pendapatan', label: 'Pendapatan' },
-    { value: 'biaya', label: 'Biaya' },
+    { value: 'pengeluaran', label: 'Pengeluaran' },
     { value: 'operasional', label: 'Operasional' },
-    { value: 'investasi', label: 'Investasi' },
     { value: 'lainnya', label: 'Lainnya' },
 ];
 
@@ -41,19 +52,19 @@ export function TransactionForm({
     const getInitialFormData = () => {
         if (initialData) {
             return {
-                date: initialData.date,
-                category: initialData.category,
-                description: initialData.description,
-                amount: initialData.amount.toString(),
-                type: initialData.type,
+                tanggal: initialData.tanggal,
+                kategori: initialData.kategori,
+                deskripsi: initialData.deskripsi,
+                jumlah: initialData.jumlah.toString(),
+                tipe: initialData.tipe,
             };
         }
         return {
-            date: new Date().toISOString().split('T')[0],
-            category: '',
-            description: '',
-            amount: '',
-            type: '' as 'income' | 'expense' | '',
+            tanggal: new Date().toISOString().split('T')[0],
+            kategori: '',
+            deskripsi: '',
+            jumlah: '',
+            tipe: '' as 'pemasukan' | 'pengeluaran' | '',
         };
     };
 
@@ -61,14 +72,14 @@ export function TransactionForm({
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.type) return;
+        if (!formData.tipe) return;
 
         onSubmit({
-            date: formData.date,
-            category: formData.category,
-            description: formData.description,
-            amount: parseFloat(formData.amount),
-            type: formData.type,
+            tanggal: formData.tanggal,
+            kategori: formData.kategori,
+            deskripsi: formData.deskripsi,
+            jumlah: parseFloat(formData.jumlah),
+            tipe: formData.tipe,
         });
         onOpenChange(false);
     };
@@ -83,15 +94,15 @@ export function TransactionForm({
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
-                        <Label htmlFor="date">Tanggal</Label>
+                        <Label htmlFor="tanggal">Tanggal</Label>
                         <Input
-                            id="date"
+                            id="tanggal"
                             type="date"
-                            value={formData.date}
+                            value={formData.tanggal}
                             onChange={(e) =>
                                 setFormData({
                                     ...formData,
-                                    date: e.target.value,
+                                    tanggal: e.target.value,
                                 })
                             }
                             required
@@ -99,21 +110,21 @@ export function TransactionForm({
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="type">Jenis Transaksi</Label>
+                        <Label htmlFor="tipe">Jenis Transaksi</Label>
                         <Select
-                            value={formData.type}
-                            onValueChange={(value: 'income' | 'expense') =>
-                                setFormData({ ...formData, type: value })
-                            }
+                            value={formData.tipe}
+                            onValueChange={(
+                                value: 'pemasukan' | 'pengeluaran',
+                            ) => setFormData({ ...formData, tipe: value })}
                         >
                             <SelectTrigger>
                                 <SelectValue placeholder="Pilih jenis transaksi" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="income">
+                                <SelectItem value="pemasukan">
                                     Kas Masuk
                                 </SelectItem>
-                                <SelectItem value="expense">
+                                <SelectItem value="pengeluaran">
                                     Kas Keluar
                                 </SelectItem>
                             </SelectContent>
@@ -121,11 +132,11 @@ export function TransactionForm({
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="category">Kategori</Label>
+                        <Label htmlFor="kategori">Kategori</Label>
                         <Select
-                            value={formData.category}
+                            value={formData.kategori}
                             onValueChange={(value) =>
-                                setFormData({ ...formData, category: value })
+                                setFormData({ ...formData, kategori: value })
                             }
                         >
                             <SelectTrigger>
@@ -145,14 +156,14 @@ export function TransactionForm({
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="description">Deskripsi</Label>
+                        <Label htmlFor="deskripsi">Deskripsi</Label>
                         <Input
-                            id="description"
-                            value={formData.description}
+                            id="deskripsi"
+                            value={formData.deskripsi}
                             onChange={(e) =>
                                 setFormData({
                                     ...formData,
-                                    description: e.target.value,
+                                    deskripsi: e.target.value,
                                 })
                             }
                             placeholder="Masukkan deskripsi"
@@ -161,15 +172,15 @@ export function TransactionForm({
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="amount">Nominal (Rp)</Label>
+                        <Label htmlFor="jumlah">Nominal (Rp)</Label>
                         <Input
-                            id="amount"
+                            id="jumlah"
                             type="number"
-                            value={formData.amount}
+                            value={formData.jumlah}
                             onChange={(e) =>
                                 setFormData({
                                     ...formData,
-                                    amount: e.target.value,
+                                    jumlah: e.target.value,
                                 })
                             }
                             placeholder="0"

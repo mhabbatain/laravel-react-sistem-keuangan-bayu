@@ -14,13 +14,27 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Employee } from '@/lib/repositories/employeeRepository';
 import { useState } from 'react';
+
+interface Employee {
+    id: number;
+    nama: string;
+    jabatan: string;
+    tipe_gaji: 'tetap' | 'harian';
+    gaji_pokok: number;
+    created_at: string;
+    updated_at: string;
+}
 
 interface EmployeeFormProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onSubmit: (data: Omit<Employee, 'id' | 'createdAt'>) => void;
+    onSubmit: (data: {
+        nama: string;
+        jabatan: string;
+        tipe_gaji: 'tetap' | 'harian';
+        gaji_pokok: number;
+    }) => void;
     initialData?: Employee;
 }
 
@@ -31,10 +45,10 @@ export function EmployeeForm({
     initialData,
 }: EmployeeFormProps) {
     const getInitialFormData = () => ({
-        name: initialData?.name || '',
-        position: initialData?.position || '',
-        salaryType: (initialData?.salaryType || '') as 'fixed' | 'daily' | '',
-        baseSalary: initialData?.baseSalary.toString() || '',
+        nama: initialData?.nama || '',
+        jabatan: initialData?.jabatan || '',
+        tipe_gaji: (initialData?.tipe_gaji || '') as 'tetap' | 'harian' | '',
+        gaji_pokok: initialData?.gaji_pokok.toString() || '',
     });
 
     const [formData, setFormData] = useState(getInitialFormData());
@@ -47,13 +61,13 @@ export function EmployeeForm({
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.salaryType) return;
+        if (!formData.tipe_gaji) return;
 
         onSubmit({
-            name: formData.name,
-            position: formData.position,
-            salaryType: formData.salaryType,
-            baseSalary: parseFloat(formData.baseSalary),
+            nama: formData.nama,
+            jabatan: formData.jabatan,
+            tipe_gaji: formData.tipe_gaji,
+            gaji_pokok: parseFloat(formData.gaji_pokok),
         });
         onOpenChange(false);
     };
@@ -68,14 +82,14 @@ export function EmployeeForm({
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
-                        <Label htmlFor="name">Nama Lengkap</Label>
+                        <Label htmlFor="nama">Nama Lengkap</Label>
                         <Input
-                            id="name"
-                            value={formData.name}
+                            id="nama"
+                            value={formData.nama}
                             onChange={(e) =>
                                 setFormData({
                                     ...formData,
-                                    name: e.target.value,
+                                    nama: e.target.value,
                                 })
                             }
                             placeholder="Masukkan nama karyawan"
@@ -84,14 +98,14 @@ export function EmployeeForm({
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="position">Jabatan</Label>
+                        <Label htmlFor="jabatan">Jabatan</Label>
                         <Input
-                            id="position"
-                            value={formData.position}
+                            id="jabatan"
+                            value={formData.jabatan}
                             onChange={(e) =>
                                 setFormData({
                                     ...formData,
-                                    position: e.target.value,
+                                    jabatan: e.target.value,
                                 })
                             }
                             placeholder="Masukkan jabatan"
@@ -100,21 +114,21 @@ export function EmployeeForm({
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="salaryType">Tipe Gaji</Label>
+                        <Label htmlFor="tipe_gaji">Tipe Gaji</Label>
                         <Select
-                            value={formData.salaryType}
-                            onValueChange={(value: 'fixed' | 'daily') =>
-                                setFormData({ ...formData, salaryType: value })
+                            value={formData.tipe_gaji}
+                            onValueChange={(value: 'tetap' | 'harian') =>
+                                setFormData({ ...formData, tipe_gaji: value })
                             }
                         >
                             <SelectTrigger>
                                 <SelectValue placeholder="Pilih tipe gaji" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="fixed">
+                                <SelectItem value="tetap">
                                     Gaji Tetap (Bulanan)
                                 </SelectItem>
-                                <SelectItem value="daily">
+                                <SelectItem value="harian">
                                     Gaji Harian
                                 </SelectItem>
                             </SelectContent>
@@ -122,19 +136,19 @@ export function EmployeeForm({
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="baseSalary">
-                            {formData.salaryType === 'daily'
+                        <Label htmlFor="gaji_pokok">
+                            {formData.tipe_gaji === 'harian'
                                 ? 'Gaji per Hari (Rp)'
                                 : 'Gaji Pokok (Rp)'}
                         </Label>
                         <Input
-                            id="baseSalary"
+                            id="gaji_pokok"
                             type="number"
-                            value={formData.baseSalary}
+                            value={formData.gaji_pokok}
                             onChange={(e) =>
                                 setFormData({
                                     ...formData,
-                                    baseSalary: e.target.value,
+                                    gaji_pokok: e.target.value,
                                 })
                             }
                             placeholder="0"

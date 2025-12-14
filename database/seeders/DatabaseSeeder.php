@@ -23,5 +23,12 @@ class DatabaseSeeder extends Seeder
                 'email_verified_at' => now(),
             ]
         );
+
+        // Seed data untuk sistem keuangan
+        $this->call([
+            KaryawanSeeder::class,
+            SlipGajiSeeder::class,
+            TransaksiSeeder::class,
+        ]);
     }
 }

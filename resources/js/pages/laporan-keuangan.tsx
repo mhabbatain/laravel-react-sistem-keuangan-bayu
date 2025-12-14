@@ -16,26 +16,37 @@ import {
     formatShortDate,
     getDateRangeForPeriod,
 } from '@/lib/formatters';
-import {
-    Transaction,
-    transactionRepository,
-} from '@/lib/repositories/transactionRepository';
-import { bukuKas } from '@/routes';
+import { laporanKeuangan } from '@/routes';
 import { BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
 import { FileSpreadsheet } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+interface Transaction {
+    id: number;
+    tanggal: string;
+    kategori: string;
+    deskripsi: string;
+    jumlah: number;
+    tipe: 'pemasukan' | 'pengeluaran';
+    created_at: string;
+    updated_at: string;
+}
+
+interface Props {
+    transactions: Transaction[];
+}
+
 type PeriodType = 'daily' | 'weekly' | 'monthly';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Buku Kas',
-        href: bukuKas().url,
+        title: 'Laporan Keuangan',
+        href: laporanKeuangan().url,
     },
 ];
 
-export default function BukuKas() {
+export default function LaporanKeuangan({ transactions }: Props) {
     const [periodType, setPeriodType] = useState<PeriodType>('monthly');
     const [selectedDate, setSelectedDate] = useState(
         new Date().toISOString().split('T')[0],
@@ -61,16 +72,19 @@ export default function BukuKas() {
             );
         }
 
-        const filtered = transactionRepository.getByDateRange(
-            range.start,
-            range.end,
-        );
+        const filtered = transactions.filter((t) => {
+            const transactionDate = new Date(t.tanggal);
+            const startDate = new Date(range.start);
+            const endDate = new Date(range.end);
+            return transactionDate >= startDate && transactionDate <= endDate;
+        });
         return { filteredTransactions: filtered, dateRange: range };
-    }, [periodType, selectedDate]);
+    }, [transactions, periodType, selectedDate]);
 
     const sortedTransactions = useMemo(() => {
         return [...filteredTransactions].sort(
-            (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+            (a, b) =>
+                new Date(a.tanggal).getTime() - new Date(b.tanggal).getTime(),
         );
     }, [filteredTransactions]);
 
@@ -82,7 +96,9 @@ export default function BukuKas() {
                     acc.length > 0 ? acc[acc.length - 1].balance : 0;
                 const currentBalance =
                     previousBalance +
-                    (t.type === 'income' ? t.amount : -t.amount);
+                    (t.tipe === 'pemasukan'
+                        ? Number(t.jumlah)
+                        : -Number(t.jumlah));
                 acc.push({ ...t, balance: currentBalance });
                 return acc;
             },
@@ -90,10 +106,18 @@ export default function BukuKas() {
         );
     }, [sortedTransactions]);
 
-    const totalIncome =
-        transactionRepository.getTotalIncome(filteredTransactions);
-    const totalExpense =
-        transactionRepository.getTotalExpense(filteredTransactions);
+    const totalIncome = useMemo(() => {
+        return filteredTransactions
+            .filter((t) => t.tipe === 'pemasukan')
+            .reduce((sum, t) => sum + Number(t.jumlah), 0);
+    }, [filteredTransactions]);
+
+    const totalExpense = useMemo(() => {
+        return filteredTransactions
+            .filter((t) => t.tipe === 'pengeluaran')
+            .reduce((sum, t) => sum + Number(t.jumlah), 0);
+    }, [filteredTransactions]);
+
     const finalBalance = totalIncome - totalExpense;
 
     const exportToCSV = () => {
@@ -106,11 +130,11 @@ export default function BukuKas() {
             'Saldo',
         ];
         const rows = transactionsWithBalance.map((t) => [
-            formatShortDate(t.date),
-            t.description,
-            t.category,
-            t.type === 'income' ? t.amount : '',
-            t.type === 'expense' ? t.amount : '',
+            formatShortDate(t.tanggal),
+            t.deskripsi,
+            t.kategori,
+            t.tipe === 'pemasukan' ? t.jumlah : '',
+            t.tipe === 'pengeluaran' ? t.jumlah : '',
             t.balance,
         ]);
 
@@ -128,7 +152,7 @@ export default function BukuKas() {
         });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = `buku-kas-${dateRange.start}-${dateRange.end}.csv`;
+        link.download = `laporan-keuangan-${dateRange.start}-${dateRange.end}.csv`;
         link.click();
 
         toast({ title: 'Berhasil', description: 'File CSV berhasil diunduh' });
@@ -136,29 +160,29 @@ export default function BukuKas() {
 
     const columns = [
         {
-            key: 'date',
+            key: 'tanggal',
             header: 'Tanggal',
             render: (t: Transaction & { balance: number }) =>
-                formatShortDate(t.date),
+                formatShortDate(t.tanggal),
         },
         {
-            key: 'description',
+            key: 'deskripsi',
             header: 'Deskripsi',
         },
         {
-            key: 'category',
+            key: 'kategori',
             header: 'Kategori',
             render: (t: Transaction & { balance: number }) => (
-                <span className="capitalize">{t.category}</span>
+                <span className="capitalize">{t.kategori}</span>
             ),
         },
         {
             key: 'income',
             header: 'Kas Masuk',
             render: (t: Transaction & { balance: number }) =>
-                t.type === 'income' ? (
+                t.tipe === 'pemasukan' ? (
                     <span className="font-medium text-success">
-                        {formatCurrency(t.amount)}
+                        {formatCurrency(Number(t.jumlah))}
                     </span>
                 ) : (
                     <span className="text-muted-foreground">-</span>
@@ -168,9 +192,9 @@ export default function BukuKas() {
             key: 'expense',
             header: 'Kas Keluar',
             render: (t: Transaction & { balance: number }) =>
-                t.type === 'expense' ? (
+                t.tipe === 'pengeluaran' ? (
                     <span className="font-medium text-destructive">
-                        {formatCurrency(t.amount)}
+                        {formatCurrency(Number(t.jumlah))}
                     </span>
                 ) : (
                     <span className="text-muted-foreground">-</span>
@@ -191,13 +215,14 @@ export default function BukuKas() {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Buku Kas" />
+            <Head title="Laporan Keuangan" />
             <div className="animate-fade-in space-y-6">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <h1 className="page-header">Buku Kas</h1>
+                        <h1 className="page-header">Laporan Keuangan</h1>
                         <p className="mt-1 text-muted-foreground">
-                            Rekap transaksi berdasarkan periode
+                            Rekap transaksi berdasarkan periode (Pemasukan &
+                            Pengeluaran)
                         </p>
                     </div>
                     <Button onClick={exportToCSV} variant="outline">

@@ -2,18 +2,25 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Transaksi;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
-class BukuKasController extends Controller
+class LaporanKeuanganController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        return Inertia::render('buku-kas');
+        $transactions = Transaksi::orderBy('tanggal', 'asc')
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        return Inertia::render('laporan-keuangan', [
+            'transactions' => $transactions,
+        ]);
     }
 
     /**

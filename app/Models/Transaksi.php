@@ -9,4 +9,19 @@ class Transaksi extends Model
 {
     /** @use HasFactory<\Database\Factories\TransaksiFactory> */
     use HasFactory;
+
+    protected $table = 'transaksi';
+
+    protected $fillable = [
+        'tanggal',
+        'kategori',
+        'deskripsi',
+        'jumlah',
+        'tipe',
+    ];
+
+    protected $casts = [
+        'tanggal' => 'date',
+        'jumlah' => 'decimal:2',
+    ];
 }

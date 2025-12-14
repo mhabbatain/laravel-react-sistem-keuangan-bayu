@@ -1,10 +1,6 @@
 import { StatCard } from '@/components/shared/stat-card';
 import AppLayout from '@/layouts/app-layout';
 import { formatCurrency, formatShortDate } from '@/lib/formatters';
-import {
-    Transaction,
-    transactionRepository,
-} from '@/lib/repositories/transactionRepository';
 import { beranda } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
@@ -15,7 +11,7 @@ import {
     TrendingUp,
     Wallet,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo } from 'react';
 import {
     Bar,
     BarChart,
@@ -27,6 +23,21 @@ import {
     YAxis,
 } from 'recharts';
 
+interface Transaction {
+    id: number;
+    tanggal: string;
+    kategori: string;
+    deskripsi: string;
+    jumlah: number;
+    tipe: 'pemasukan' | 'pengeluaran';
+    created_at: string;
+    updated_at: string;
+}
+
+interface Props {
+    transactions: Transaction[];
+}
+
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Beranda',
@@ -34,45 +45,63 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function Beranda() {
-    const [transactions] = useState<Transaction[]>(() =>
-        transactionRepository.getAll(),
-    );
+export default function Beranda({ transactions }: Props) {
+    const totalIncome = useMemo(() => {
+        return transactions
+            .filter((t) => t.tipe === 'pemasukan')
+            .reduce((sum, t) => sum + Number(t.jumlah), 0);
+    }, [transactions]);
 
-    const totalIncome = transactionRepository.getTotalIncome(transactions);
-    const totalExpense = transactionRepository.getTotalExpense(transactions);
-    const balance = transactionRepository.getBalance(transactions);
+    const totalExpense = useMemo(() => {
+        return transactions
+            .filter((t) => t.tipe === 'pengeluaran')
+            .reduce((sum, t) => sum + Number(t.jumlah), 0);
+    }, [transactions]);
+
+    const balance = useMemo(() => {
+        return totalIncome - totalExpense;
+    }, [totalIncome, totalExpense]);
 
     // Group transactions by month for chart
-    const chartData = transactions.reduce(
-        (
-            acc: Record<
-                string,
-                { month: string; income: number; expense: number }
-            >,
-            t,
-        ) => {
-            const month = t.date.substring(0, 7);
-            if (!acc[month]) {
-                acc[month] = { month, income: 0, expense: 0 };
-            }
-            if (t.type === 'income') {
-                acc[month].income += t.amount;
-            } else {
-                acc[month].expense += t.amount;
-            }
-            return acc;
-        },
-        {},
-    );
+    const chartData = useMemo(() => {
+        return transactions.reduce(
+            (
+                acc: Record<
+                    string,
+                    { month: string; income: number; expense: number }
+                >,
+                t,
+            ) => {
+                const month = t.tanggal.substring(0, 7);
+                if (!acc[month]) {
+                    acc[month] = { month, income: 0, expense: 0 };
+                }
+                if (t.tipe === 'pemasukan') {
+                    acc[month].income += Number(t.jumlah);
+                } else {
+                    acc[month].expense += Number(t.jumlah);
+                }
+                return acc;
+            },
+            {},
+        );
+    }, [transactions]);
 
-    const chartDataArray = Object.values(chartData).sort((a, b) =>
-        a.month.localeCompare(b.month),
-    );
+    const chartDataArray = useMemo(() => {
+        return Object.values(chartData).sort((a, b) =>
+            a.month.localeCompare(b.month),
+        );
+    }, [chartData]);
 
-    const recentTransactions = [...transactions]
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-        .slice(0, 5);
+    const recentTransactions = useMemo(() => {
+        return [...transactions]
+            .sort(
+                (a, b) =>
+                    new Date(b.tanggal).getTime() -
+                    new Date(a.tanggal).getTime(),
+            )
+            .slice(0, 5);
+    }, [transactions]);
 
     const chartColors = {
         income: '#22c55e', // green-500
@@ -137,11 +166,8 @@ export default function Beranda() {
                                     }
                                 />
                                 <Tooltip
-                                    contentStyle={{
-                                        backgroundColor: 'oklch(var(--card))',
-                                        border: '1px solid oklch(var(--border))',
-                                        borderRadius: '8px',
-                                    }}
+                                    wrapperClassName="font-semibold bg-white border-2 rounded-lg"
+                                    // contentStyle={{}}
                                     formatter={(value: number) =>
                                         formatCurrency(value)
                                     }
@@ -176,12 +202,12 @@ export default function Beranda() {
                                 <div className="flex items-center gap-4">
                                     <div
                                         className={`flex h-10 w-10 items-center justify-center rounded-lg ${
-                                            t.type === 'income'
+                                            t.tipe === 'pemasukan'
                                                 ? 'bg-success/10'
                                                 : 'bg-destructive/10'
                                         }`}
                                     >
-                                        {t.type === 'income' ? (
+                                        {t.tipe === 'pemasukan' ? (
                                             <ArrowUpRight className="h-5 w-5 text-success" />
                                         ) : (
                                             <ArrowDownRight className="h-5 w-5 text-destructive" />
@@ -189,18 +215,18 @@ export default function Beranda() {
                                     </div>
                                     <div>
                                         <p className="font-medium text-foreground">
-                                            {t.description}
+                                            {t.deskripsi}
                                         </p>
                                         <p className="text-sm text-muted-foreground">
-                                            {formatShortDate(t.date)}
+                                            {formatShortDate(t.tanggal)}
                                         </p>
                                     </div>
                                 </div>
                                 <span
-                                    className={`font-semibold ${t.type === 'income' ? 'text-success' : 'text-destructive'}`}
+                                    className={`font-semibold ${t.tipe === 'pemasukan' ? 'text-success' : 'text-destructive'}`}
                                 >
-                                    {t.type === 'income' ? '+' : '-'}
-                                    {formatCurrency(t.amount)}
+                                    {t.tipe === 'pemasukan' ? '+' : '-'}
+                                    {formatCurrency(t.jumlah)}
                                 </span>
                             </div>
                         ))}
