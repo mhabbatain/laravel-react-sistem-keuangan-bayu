@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -12,8 +13,16 @@ import { formatCurrency, getDateRangeForPeriod } from '@/lib/formatters';
 import { laba } from '@/routes';
 import { BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
-import { DollarSign, TrendingDown, TrendingUp } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { DollarSign, FileText, TrendingDown, TrendingUp } from 'lucide-react';
 import { useMemo, useState } from 'react';
+
+interface jsPDFWithAutoTable extends jsPDF {
+    lastAutoTable?: {
+        finalY: number;
+    };
+}
 
 interface Transaction {
     id: number;
@@ -94,15 +103,130 @@ export default function Laba({ transactions }: Props) {
         return Object.entries(breakdown).sort((a, b) => b[1] - a[1]);
     }, [filteredTransactions]);
 
+    const exportToPDF = () => {
+        const doc = new jsPDF();
+
+        // Add title
+        doc.setFontSize(18);
+        doc.text('Laporan Laba Rugi', 14, 20);
+
+        // Add period info
+        doc.setFontSize(11);
+        const periodText =
+            periodType === 'yearly'
+                ? `Tahun ${selectedDate.substring(0, 4)}`
+                : periodType === 'monthly'
+                  ? `Bulan ${selectedDate.substring(0, 7)}`
+                  : `Tanggal ${selectedDate}`;
+        doc.text(`Periode: ${periodText}`, 14, 30);
+
+        // Add summary
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Ringkasan', 14, 42);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text(`Total Pendapatan: ${formatCurrency(revenue)}`, 14, 50);
+        doc.text(`Total Biaya: ${formatCurrency(costs)}`, 14, 56);
+        doc.text(`Laba Bersih: ${formatCurrency(profit)}`, 14, 62);
+        doc.text(`Margin Keuntungan: ${profitMargin.toFixed(1)}%`, 14, 68);
+
+        // Add income breakdown table
+        if (incomeBreakdown.length > 0) {
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Rincian Pendapatan', 14, 80);
+            doc.setFont('helvetica', 'normal');
+
+            const incomeData = incomeBreakdown.map(([category, amount]) => [
+                category,
+                formatCurrency(amount),
+            ]);
+
+            autoTable(doc, {
+                startY: 85,
+                head: [['Kategori', 'Jumlah']],
+                body: incomeData,
+                theme: 'grid',
+                headStyles: { fillColor: [34, 197, 94] },
+                styles: { fontSize: 9 },
+                columnStyles: {
+                    0: { cellWidth: 100 },
+                    1: { cellWidth: 80, halign: 'right' },
+                },
+            });
+        }
+
+        // Add expense breakdown table
+        if (expenseBreakdown.length > 0) {
+            const finalY =
+                (doc as jsPDFWithAutoTable).lastAutoTable?.finalY || 95;
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Rincian Biaya', 14, finalY + 10);
+            doc.setFont('helvetica', 'normal');
+
+            const expenseData = expenseBreakdown.map(([category, amount]) => [
+                category,
+                formatCurrency(amount),
+            ]);
+
+            autoTable(doc, {
+                startY: finalY + 15,
+                head: [['Kategori', 'Jumlah']],
+                body: expenseData,
+                theme: 'grid',
+                headStyles: { fillColor: [239, 68, 68] },
+                styles: { fontSize: 9 },
+                columnStyles: {
+                    0: { cellWidth: 100 },
+                    1: { cellWidth: 80, halign: 'right' },
+                },
+            });
+        }
+
+        // Add profit statement
+        const finalY = (doc as jsPDFWithAutoTable).lastAutoTable?.finalY || 110;
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Laporan Laba Rugi', 14, finalY + 10);
+        doc.setFont('helvetica', 'normal');
+
+        autoTable(doc, {
+            startY: finalY + 15,
+            body: [
+                ['Total Pendapatan', formatCurrency(revenue)],
+                ['Total Biaya', `(${formatCurrency(costs)})`],
+                ['Laba Bersih', formatCurrency(profit)],
+            ],
+            theme: 'plain',
+            styles: { fontSize: 10 },
+            columnStyles: {
+                0: { cellWidth: 100, fontStyle: 'bold' },
+                1: { cellWidth: 80, halign: 'right' },
+            },
+        });
+
+        // Save PDF
+        const filename = `laporan-laba-rugi-${periodType}-${selectedDate.substring(0, periodType === 'yearly' ? 4 : periodType === 'monthly' ? 7 : 10)}.pdf`;
+        doc.save(filename);
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Laporan Laba Rugi" />
             <div className="animate-fade-in space-y-6">
-                <div>
-                    <h1 className="page-header">Laporan Laba Rugi</h1>
-                    <p className="mt-1 text-muted-foreground">
-                        Analisis pendapatan dan biaya bisnis Anda
-                    </p>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h1 className="page-header">Laporan Laba Rugi</h1>
+                        <p className="mt-1 text-muted-foreground">
+                            Analisis pendapatan dan biaya bisnis Anda
+                        </p>
+                    </div>
+                    <Button onClick={exportToPDF} variant="outline">
+                        <FileText className="mr-2 h-4 w-4" />
+                        Export PDF
+                    </Button>
                 </div>
 
                 {/* Period Selection */}
@@ -308,7 +432,7 @@ export default function Laba({ transactions }: Props) {
                                 Laba Bersih
                             </span>
                             <span
-                                className={`text-lg font-bold ${profit >= 0 ? 'text-accent' : 'text-destructive'}`}
+                                className={`text-lg font-bold ${profit >= 0 ? '' : 'text-destructive'}`}
                             >
                                 {formatCurrency(profit)}
                             </span>
