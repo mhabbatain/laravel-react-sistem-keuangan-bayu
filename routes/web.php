@@ -33,6 +33,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::post('slip-gaji', [SlipGajiController::class, 'store'])->name('slip-gaji.store');
     Route::delete('slip-gaji/{slipGaji}', [SlipGajiController::class, 'destroy'])->name('slip-gaji.destroy');
+    Route::get('slip-gaji/{slipGaji}/print', [SlipGajiController::class, 'print'])->name('slip-gaji.print');
 });
 
 require __DIR__ . '/settings.php';

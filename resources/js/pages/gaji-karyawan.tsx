@@ -12,7 +12,7 @@ import karyawan from '@/routes/karyawan';
 import slipGaji from '@/routes/slip-gaji';
 import { BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
-import { Edit2, FileText, Plus, Trash2, Users } from 'lucide-react';
+import { Edit2, FileText, Printer, Plus, Trash2, Users } from 'lucide-react';
 import { useState } from 'react';
 
 interface Employee {
@@ -144,6 +144,10 @@ export default function GajiKaryawan({
         setEmployeeFormOpen(true);
     };
 
+    const handlePrintSlipGaji = (id: number) => {
+        window.open(slipGaji.print(id).url, '_blank');
+    };
+
     const employeeColumns = [
         { key: 'nama', header: 'Nama' },
         { key: 'jabatan', header: 'Jabatan' },
@@ -210,13 +214,24 @@ export default function GajiKaryawan({
             key: 'actions',
             header: 'Aksi',
             render: (p: SlipGaji) => (
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteGajiKaryawan(p.id)}
-                >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
+                <div className="flex gap-2">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handlePrintSlipGaji(p.id)}
+                        title="Print PDF"
+                    >
+                        <Printer className="h-4 w-4 text-blue-600" />
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteGajiKaryawan(p.id)}
+                        title="Hapus"
+                    >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                </div>
             ),
         },
     ];

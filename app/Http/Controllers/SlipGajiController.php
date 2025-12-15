@@ -8,6 +8,7 @@ use App\Models\Transaksi;
 use App\Models\Karyawan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class SlipGajiController extends Controller
 {
@@ -70,5 +71,19 @@ class SlipGajiController extends Controller
 
         return redirect()->route('gaji-karyawan.index')
             ->with('success', 'Slip gaji berhasil dihapus');
+    }
+
+    /**
+     * Generate PDF for slip gaji
+     */
+    public function print(SlipGaji $slipGaji)
+    {
+        $slipGaji->load('karyawan');
+
+        $pdf = Pdf::loadView('pdf.slip-gaji', [
+            'slipGaji' => $slipGaji,
+        ]);
+
+        return $pdf->download('slip-gaji-' . $slipGaji->karyawan->nama . '-' . $slipGaji->periode . '.pdf');
     }
 }

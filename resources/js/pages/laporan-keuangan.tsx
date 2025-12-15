@@ -19,7 +19,9 @@ import {
 import { laporanKeuangan } from '@/routes';
 import { BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
-import { FileSpreadsheet } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { FileText } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 interface Transaction {
@@ -120,42 +122,76 @@ export default function LaporanKeuangan({ transactions }: Props) {
 
     const finalBalance = totalIncome - totalExpense;
 
-    const exportToCSV = () => {
-        const headers = [
-            'Tanggal',
-            'Deskripsi',
-            'Kategori',
-            'Kas Masuk',
-            'Kas Keluar',
-            'Saldo',
-        ];
-        const rows = transactionsWithBalance.map((t) => [
+    const exportToPDF = () => {
+        const doc = new jsPDF();
+
+        // Add title
+        doc.setFontSize(18);
+        doc.text('Laporan Keuangan', 14, 20);
+
+        // Add period info
+        doc.setFontSize(11);
+        doc.text(
+            `Periode: ${formatShortDate(dateRange.start)} - ${formatShortDate(dateRange.end)}`,
+            14,
+            30,
+        );
+
+        // Add summary
+        doc.setFontSize(10);
+        doc.text(`Total Kas Masuk: ${formatCurrency(totalIncome)}`, 14, 40);
+        doc.text(
+            `Total Kas Keluar: ${formatCurrency(totalExpense)}`,
+            14,
+            46,
+        );
+        doc.text(`Saldo Akhir: ${formatCurrency(finalBalance)}`, 14, 52);
+
+        // Add table
+        const tableData = transactionsWithBalance.map((t) => [
             formatShortDate(t.tanggal),
             t.deskripsi,
             t.kategori,
-            t.tipe === 'pemasukan' ? t.jumlah : '',
-            t.tipe === 'pengeluaran' ? t.jumlah : '',
-            t.balance,
+            t.tipe === 'pemasukan' ? formatCurrency(Number(t.jumlah)) : '-',
+            t.tipe === 'pengeluaran' ? formatCurrency(Number(t.jumlah)) : '-',
+            formatCurrency(t.balance),
         ]);
 
-        const csvContent = [
-            headers.join(','),
-            ...rows.map((row) => row.join(',')),
-            '',
-            `Total Kas Masuk,,,,${totalIncome}`,
-            `Total Kas Keluar,,,,,${totalExpense}`,
-            `Saldo Akhir,,,,,,${finalBalance}`,
-        ].join('\n');
-
-        const blob = new Blob([csvContent], {
-            type: 'text/csv;charset=utf-8;',
+        autoTable(doc, {
+            startY: 60,
+            head: [
+                [
+                    'Tanggal',
+                    'Deskripsi',
+                    'Kategori',
+                    'Kas Masuk',
+                    'Kas Keluar',
+                    'Saldo',
+                ],
+            ],
+            body: tableData,
+            theme: 'grid',
+            headStyles: { fillColor: [41, 128, 185] },
+            styles: { fontSize: 8 },
+            columnStyles: {
+                0: { cellWidth: 25 },
+                1: { cellWidth: 45 },
+                2: { cellWidth: 30 },
+                3: { cellWidth: 30 },
+                4: { cellWidth: 30 },
+                5: { cellWidth: 30 },
+            },
         });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `laporan-keuangan-${dateRange.start}-${dateRange.end}.csv`;
-        link.click();
 
-        toast({ title: 'Berhasil', description: 'File CSV berhasil diunduh' });
+        // Save PDF
+        doc.save(
+            `laporan-keuangan-${dateRange.start}-${dateRange.end}.pdf`,
+        );
+
+        toast({
+            title: 'Berhasil',
+            description: 'File PDF berhasil diunduh',
+        });
     };
 
     const columns = [
@@ -225,9 +261,9 @@ export default function LaporanKeuangan({ transactions }: Props) {
                             Pengeluaran)
                         </p>
                     </div>
-                    <Button onClick={exportToCSV} variant="outline">
-                        <FileSpreadsheet className="mr-2 h-4 w-4" />
-                        Export CSV
+                    <Button onClick={exportToPDF} variant="outline">
+                        <FileText className="mr-2 h-4 w-4" />
+                        Export PDF
                     </Button>
                 </div>
 
