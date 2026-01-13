@@ -56,7 +56,7 @@ const mainNavItems: NavItem[] = [
 const footerNavItems: NavItem[] = [
     {
         title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
+        href: 'https://github.com/mhabbatain/laravel-react-sistem-keuangan-bayu',
         icon: Folder,
     },
 ];

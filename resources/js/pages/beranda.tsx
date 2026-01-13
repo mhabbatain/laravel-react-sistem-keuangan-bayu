@@ -16,7 +16,10 @@ import {
     Bar,
     BarChart,
     CartesianGrid,
+    Cell,
     Legend,
+    Pie,
+    PieChart,
     ResponsiveContainer,
     Tooltip,
     XAxis,
@@ -43,6 +46,23 @@ const breadcrumbs: BreadcrumbItem[] = [
         title: 'Beranda',
         href: beranda().url,
     },
+];
+
+const CHART_COLORS = {
+    income: '#22c55e', // green-500
+    expense: '#ef4444', // red-500
+};
+
+// Category colors for pie charts
+const CATEGORY_COLORS = [
+    '#22c55e', // green-500
+    '#3b82f6', // blue-500
+    '#f59e0b', // amber-500
+    '#8b5cf6', // violet-500
+    '#ec4899', // pink-500
+    '#14b8a6', // teal-500
+    '#f97316', // orange-500
+    '#6366f1', // indigo-500
 ];
 
 export default function Beranda({ transactions }: Props) {
@@ -103,10 +123,43 @@ export default function Beranda({ transactions }: Props) {
             .slice(0, 5);
     }, [transactions]);
 
-    const chartColors = {
-        income: '#22c55e', // green-500
-        expense: '#ef4444', // red-500
-    };
+    // Group transactions by category for income
+    const incomeByCategoryData = useMemo(() => {
+        const grouped = transactions
+            .filter((t) => t.tipe === 'pemasukan')
+            .reduce((acc: Record<string, number>, t) => {
+                if (!acc[t.kategori]) {
+                    acc[t.kategori] = 0;
+                }
+                acc[t.kategori] += Number(t.jumlah);
+                return acc;
+            }, {});
+
+        return Object.entries(grouped).map(([name, value], index) => ({
+            name,
+            value,
+            color: CATEGORY_COLORS[index % CATEGORY_COLORS.length],
+        }));
+    }, [transactions]);
+
+    // Group transactions by category for expense
+    const expenseByCategoryData = useMemo(() => {
+        const grouped = transactions
+            .filter((t) => t.tipe === 'pengeluaran')
+            .reduce((acc: Record<string, number>, t) => {
+                if (!acc[t.kategori]) {
+                    acc[t.kategori] = 0;
+                }
+                acc[t.kategori] += Number(t.jumlah);
+                return acc;
+            }, {});
+
+        return Object.entries(grouped).map(([name, value], index) => ({
+            name,
+            value,
+            color: CATEGORY_COLORS[index % CATEGORY_COLORS.length],
+        }));
+    }, [transactions]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -142,51 +195,201 @@ export default function Beranda({ transactions }: Props) {
                 </div>
 
                 {/* Chart */}
-                <div className="animate-slide-up rounded-xl border border-border bg-card p-6">
-                    <h2 className="section-header mb-6">
-                        Grafik Kas Masuk & Keluar
-                    </h2>
-                    <div className="h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={chartDataArray}>
-                                <CartesianGrid
-                                    strokeDasharray="3 3"
-                                    className="stroke-border"
-                                />
-                                <XAxis
-                                    dataKey="month"
-                                    className="stroke-muted-foreground"
-                                    fontSize={12}
-                                />
-                                <YAxis
-                                    className="stroke-muted-foreground"
-                                    fontSize={12}
-                                    tickFormatter={(value) =>
-                                        `${value / 1000000}jt`
-                                    }
-                                />
-                                <Tooltip
-                                    wrapperClassName="font-semibold bg-white border-2 rounded-lg"
-                                    // contentStyle={{}}
-                                    formatter={(value: number) =>
-                                        formatCurrency(value)
-                                    }
-                                />
-                                <Legend />
-                                <Bar
-                                    dataKey="income"
-                                    name="Kas Masuk"
-                                    fill={chartColors.income}
-                                    radius={[4, 4, 0, 0]}
-                                />
-                                <Bar
-                                    dataKey="expense"
-                                    name="Kas Keluar"
-                                    fill={chartColors.expense}
-                                    radius={[4, 4, 0, 0]}
-                                />
-                            </BarChart>
-                        </ResponsiveContainer>
+                <div className="grid gap-6 lg:grid-cols-3">
+                    <div className="animate-slide-up rounded-xl border border-border bg-card p-6 lg:col-span-2">
+                        <h2 className="section-header mb-6">
+                            Grafik Kas Masuk & Keluar per Bulan
+                        </h2>
+                        <div className="h-[300px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={chartDataArray}>
+                                    <CartesianGrid
+                                        strokeDasharray="3 3"
+                                        className="stroke-border"
+                                    />
+                                    <XAxis
+                                        dataKey="month"
+                                        className="stroke-muted-foreground"
+                                        fontSize={12}
+                                    />
+                                    <YAxis
+                                        className="stroke-muted-foreground"
+                                        fontSize={12}
+                                        tickFormatter={(value) =>
+                                            `${value / 1000000}jt`
+                                        }
+                                    />
+                                    <Tooltip
+                                        wrapperClassName="font-semibold bg-white border-2 rounded-lg"
+                                        formatter={(value: number) =>
+                                            formatCurrency(value)
+                                        }
+                                    />
+                                    <Legend />
+                                    <Bar
+                                        dataKey="income"
+                                        name="Kas Masuk"
+                                        fill={CHART_COLORS.income}
+                                        radius={[4, 4, 0, 0]}
+                                    />
+                                    <Bar
+                                        dataKey="expense"
+                                        name="Kas Keluar"
+                                        fill={CHART_COLORS.expense}
+                                        radius={[4, 4, 0, 0]}
+                                    />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
+                    <div className="animate-slide-up rounded-xl border border-border bg-card p-6">
+                        <h2 className="section-header mb-6">
+                            Total Distribusi Kas
+                        </h2>
+                        <div className="h-[300px]">
+                            {totalIncome > 0 || totalExpense > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={[
+                                                {
+                                                    name: 'Kas Masuk',
+                                                    value: totalIncome,
+                                                    color: CHART_COLORS.income,
+                                                },
+                                                {
+                                                    name: 'Kas Keluar',
+                                                    value: totalExpense,
+                                                    color: CHART_COLORS.expense,
+                                                },
+                                            ]}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={50}
+                                            outerRadius={90}
+                                            paddingAngle={3}
+                                            dataKey="value"
+                                            label={({ name, percent }) =>
+                                                `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`
+                                            }
+                                            labelLine={false}
+                                        >
+                                            <Cell fill={CHART_COLORS.income} />
+                                            <Cell fill={CHART_COLORS.expense} />
+                                        </Pie>
+                                        <Tooltip
+                                            wrapperClassName="font-semibold bg-white border-2 rounded-lg"
+                                            formatter={(value: number) =>
+                                                formatCurrency(value)
+                                            }
+                                        />
+                                        <Legend />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="flex h-full items-center justify-center text-muted-foreground">
+                                    Belum ada data transaksi
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Category Charts */}
+                <div className="grid gap-6 md:grid-cols-2">
+                    <div className="animate-slide-up rounded-xl border border-border bg-card p-6">
+                        <h2 className="section-header mb-6">
+                            Kas Masuk per Kategori
+                        </h2>
+                        <div className="h-[300px]">
+                            {incomeByCategoryData.length > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={incomeByCategoryData}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={50}
+                                            outerRadius={90}
+                                            paddingAngle={3}
+                                            dataKey="value"
+                                            label={({ name, percent }) =>
+                                                `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`
+                                            }
+                                            labelLine={false}
+                                        >
+                                            {incomeByCategoryData.map(
+                                                (entry, index) => (
+                                                    <Cell
+                                                        key={`cell-income-${index}`}
+                                                        fill={entry.color}
+                                                    />
+                                                ),
+                                            )}
+                                        </Pie>
+                                        <Tooltip
+                                            wrapperClassName="font-semibold bg-white border-2 rounded-lg"
+                                            formatter={(value: number) =>
+                                                formatCurrency(value)
+                                            }
+                                        />
+                                        <Legend />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="flex h-full items-center justify-center text-muted-foreground">
+                                    Belum ada data kas masuk
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="animate-slide-up rounded-xl border border-border bg-card p-6">
+                        <h2 className="section-header mb-6">
+                            Kas Keluar per Kategori
+                        </h2>
+                        <div className="h-[300px]">
+                            {expenseByCategoryData.length > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={expenseByCategoryData}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={50}
+                                            outerRadius={90}
+                                            paddingAngle={3}
+                                            dataKey="value"
+                                            label={({ name, percent }) =>
+                                                `${name} ${percent ? (percent * 100).toFixed(0) : 0}%`
+                                            }
+                                            labelLine={false}
+                                        >
+                                            {expenseByCategoryData.map(
+                                                (entry, index) => (
+                                                    <Cell
+                                                        key={`cell-expense-${index}`}
+                                                        fill={entry.color}
+                                                    />
+                                                ),
+                                            )}
+                                        </Pie>
+                                        <Tooltip
+                                            wrapperClassName="font-semibold bg-white border-2 rounded-lg"
+                                            formatter={(value: number) =>
+                                                formatCurrency(value)
+                                            }
+                                        />
+                                        <Legend />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="flex h-full items-center justify-center text-muted-foreground">
+                                    Belum ada data kas keluar
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 

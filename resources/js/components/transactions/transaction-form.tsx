@@ -14,7 +14,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 interface Transaction {
     id: number;
@@ -36,11 +36,21 @@ interface TransactionFormProps {
     initialData?: Transaction;
 }
 
-const categories = [
-    { value: 'pendapatan', label: 'Pendapatan' },
-    { value: 'pengeluaran', label: 'Pengeluaran' },
-    { value: 'operasional', label: 'Operasional' },
-    { value: 'lainnya', label: 'Lainnya' },
+const incomeCategories = [
+    { value: 'Penjualan', label: 'Penjualan' },
+    { value: 'Jasa', label: 'Jasa' },
+    { value: 'Investasi', label: 'Investasi' },
+    { value: 'Lainnya', label: 'Lainnya' },
+];
+
+const expenseCategories = [
+    { value: 'Operasional', label: 'Operasional' },
+    { value: 'Utilitas', label: 'Utilitas' },
+    { value: 'Pembelian', label: 'Pembelian' },
+    { value: 'Gaji', label: 'Gaji' },
+    { value: 'Transportasi', label: 'Transportasi' },
+    { value: 'Pemasaran', label: 'Pemasaran' },
+    { value: 'Lainnya', label: 'Lainnya' },
 ];
 
 export function TransactionForm({
@@ -69,6 +79,12 @@ export function TransactionForm({
     };
 
     const [formData, setFormData] = useState(getInitialFormData);
+
+    const availableCategories = useMemo(() => {
+        if (formData.tipe === 'pemasukan') return incomeCategories;
+        if (formData.tipe === 'pengeluaran') return expenseCategories;
+        return [];
+    }, [formData.tipe]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -115,7 +131,13 @@ export function TransactionForm({
                             value={formData.tipe}
                             onValueChange={(
                                 value: 'pemasukan' | 'pengeluaran',
-                            ) => setFormData({ ...formData, tipe: value })}
+                            ) =>
+                                setFormData({
+                                    ...formData,
+                                    tipe: value,
+                                    kategori: '',
+                                })
+                            }
                         >
                             <SelectTrigger>
                                 <SelectValue placeholder="Pilih jenis transaksi" />
@@ -138,12 +160,19 @@ export function TransactionForm({
                             onValueChange={(value) =>
                                 setFormData({ ...formData, kategori: value })
                             }
+                            disabled={!formData.tipe}
                         >
                             <SelectTrigger>
-                                <SelectValue placeholder="Pilih kategori" />
+                                <SelectValue
+                                    placeholder={
+                                        formData.tipe
+                                            ? 'Pilih kategori'
+                                            : 'Pilih jenis transaksi terlebih dahulu'
+                                    }
+                                />
                             </SelectTrigger>
                             <SelectContent>
-                                {categories.map((cat) => (
+                                {availableCategories.map((cat) => (
                                     <SelectItem
                                         key={cat.value}
                                         value={cat.value}
