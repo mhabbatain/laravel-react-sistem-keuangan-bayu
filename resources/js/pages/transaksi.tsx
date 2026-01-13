@@ -3,6 +3,7 @@ import { TransactionForm } from '@/components/transactions/transaction-form';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
@@ -34,6 +35,8 @@ interface Props {
     transactions: Transaction[];
 }
 
+type PeriodType = 'daily' | 'monthly' | 'yearly';
+
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Transaksi',
@@ -51,6 +54,28 @@ export default function Transaksi({
     const [editingTransaction, setEditingTransaction] = useState<
         Transaction | undefined
     >();
+    const [periodType, setPeriodType] = useState<PeriodType>('monthly');
+    const [selectedDate, setSelectedDate] = useState(
+        new Date().toISOString().split('T')[0],
+    );
+
+    const matchesPeriod = (transactionDate: string): boolean => {
+        const txDate = new Date(transactionDate);
+        const selDate = new Date(selectedDate);
+
+        if (periodType === 'daily') {
+            return transactionDate === selectedDate;
+        } else if (periodType === 'monthly') {
+            const txYear = txDate.getFullYear();
+            const txMonth = String(txDate.getMonth() + 1).padStart(2, '0');
+            const selYear = selDate.getFullYear();
+            const selMonth = String(selDate.getMonth() + 1).padStart(2, '0');
+            return `${txYear}-${txMonth}` === `${selYear}-${selMonth}`;
+        } else if (periodType === 'yearly') {
+            return txDate.getFullYear() === selDate.getFullYear();
+        }
+        return true;
+    };
 
     const filteredTransactions = useMemo(() => {
         return initialTransactions
@@ -62,14 +87,27 @@ export default function Transaksi({
                     typeFilter === 'all' || t.tipe === typeFilter;
                 const matchesCategory =
                     categoryFilter === 'all' || t.kategori === categoryFilter;
-                return matchesSearch && matchesType && matchesCategory;
+                const matchesPeriodFilter = matchesPeriod(t.tanggal);
+                return (
+                    matchesSearch &&
+                    matchesType &&
+                    matchesCategory &&
+                    matchesPeriodFilter
+                );
             })
             .sort(
                 (a, b) =>
                     new Date(b.tanggal).getTime() -
                     new Date(a.tanggal).getTime(),
             );
-    }, [initialTransactions, search, typeFilter, categoryFilter]);
+    }, [
+        initialTransactions,
+        search,
+        typeFilter,
+        categoryFilter,
+        periodType,
+        selectedDate,
+    ]);
 
     const categories = useMemo(() => {
         return [...new Set(initialTransactions.map((t) => t.kategori))];
@@ -225,6 +263,7 @@ export default function Transaksi({
                             className="pl-10"
                         />
                     </div>
+
                     <Select value={typeFilter} onValueChange={setTypeFilter}>
                         <SelectTrigger className="w-full sm:w-[180px]">
                             <SelectValue placeholder="Jenis Transaksi" />
@@ -258,6 +297,54 @@ export default function Transaksi({
                         </SelectContent>
                     </Select>
                 </div>
+                    {/* FILTER */}
+                    <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-4 sm:flex-row">
+                        <div className="space-y-2">
+                            <Label>Periode</Label>
+                            <Select
+                                value={periodType}
+                                onValueChange={(v: PeriodType) => setPeriodType(v)}
+                            >
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="daily">Harian</SelectItem>
+                                    <SelectItem value="monthly">Bulanan</SelectItem>
+                                    <SelectItem value="yearly">Tahunan</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Tanggal</Label>
+                            <Input
+                                type={
+                                    periodType === 'yearly'
+                                        ? 'number'
+                                        : periodType === 'monthly'
+                                        ? 'month'
+                                        : 'date'
+                                }
+                                value={
+                                    periodType === 'yearly'
+                                        ? selectedDate.substring(0, 4)
+                                        : periodType === 'monthly'
+                                        ? selectedDate.substring(0, 7)
+                                        : selectedDate
+                                }
+                                onChange={(e) => {
+                                    if (periodType === 'yearly') {
+                                        setSelectedDate(`${e.target.value}-01-01`);
+                                    } else if (periodType === 'monthly') {
+                                        setSelectedDate(`${e.target.value}-01`);
+                                    } else {
+                                        setSelectedDate(e.target.value);
+                                    }
+                                }}
+                                className="w-[180px]"
+                            />
+                        </div>
+                    </div>
 
                 {/* Table */}
                 <DataTable<Transaction>
