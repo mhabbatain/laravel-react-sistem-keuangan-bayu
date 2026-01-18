@@ -13,8 +13,8 @@ import {
 import { beranda, laba, laporanKeuangan } from '@/routes';
 import gajiKaryawan from '@/routes/gaji-karyawan';
 import transaksi from '@/routes/transaksi';
-import { type NavItem } from '@/types';
-import { Link } from '@inertiajs/react';
+import { type NavItem, type SharedData } from '@/types';
+import { Link, usePage } from '@inertiajs/react';
 import {
     ArrowLeftRight,
     BookOpen,
@@ -23,9 +23,10 @@ import {
     TrendingUp,
     Users,
 } from 'lucide-react';
+import { useMemo } from 'react';
 import AppLogo from './app-logo';
 
-const mainNavItems: NavItem[] = [
+const allNavItems: NavItem[] = [
     {
         title: 'Beranda',
         href: beranda(),
@@ -53,6 +54,9 @@ const mainNavItems: NavItem[] = [
     },
 ];
 
+// Menu items accessible by Admin Karyawan
+const adminKaryawanAllowedItems = ['Beranda', 'Transaksi Kas', 'Laporan Keuangan'];
+
 const footerNavItems: NavItem[] = [
     {
         title: 'Repository',
@@ -62,6 +66,26 @@ const footerNavItems: NavItem[] = [
 ];
 
 export function AppSidebar() {
+    const { auth } = usePage<SharedData>().props;
+    const userRole = auth.user?.role;
+
+    const mainNavItems = useMemo(() => {
+        // Owner can access all menu items
+        if (userRole === 'owner') {
+            return allNavItems;
+        }
+
+        // Admin Karyawan can only access specific menu items
+        if (userRole === 'admin_karyawan') {
+            return allNavItems.filter((item) =>
+                adminKaryawanAllowedItems.includes(item.title)
+            );
+        }
+
+        // Default: show all items (for when role is undefined during loading)
+        return allNavItems;
+    }, [userRole]);
+
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>

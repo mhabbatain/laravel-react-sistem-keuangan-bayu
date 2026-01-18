@@ -15,12 +15,25 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
+        // Owner user
         User::firstOrCreate(
             ['email' => 'byuu@sistem.com'],
             [
-                'name' => 'Admin/Pemilik',
+                'name' => 'Owner',
                 'password' => 'password',
                 'email_verified_at' => now(),
+                'role' => 'owner',
+            ]
+        );
+
+        // Admin Karyawan user
+        User::firstOrCreate(
+            ['email' => 'admin@sistem.com'],
+            [
+                'name' => 'Admin Karyawan',
+                'password' => 'password',
+                'email_verified_at' => now(),
+                'role' => 'admin_karyawan',
             ]
         );
 
