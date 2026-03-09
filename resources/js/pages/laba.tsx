@@ -121,21 +121,43 @@ export default function Laba({ transactions }: Props) {
         doc.text(`Periode: ${periodText}`, 14, 30);
 
         // Add summary
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Ringkasan', 14, 42);
-        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(11);
+        doc.setTextColor(100, 116, 139);
+        doc.text('Ringkasan Keuangan:', 14, 42);
+
         doc.setFontSize(10);
+        doc.setTextColor(30, 41, 59);
         doc.text(`Total Pendapatan: ${formatCurrency(revenue)}`, 14, 50);
         doc.text(`Total Biaya: ${formatCurrency(costs)}`, 14, 56);
-        doc.text(`Laba Bersih: ${formatCurrency(profit)}`, 14, 62);
-        doc.text(`Margin Keuntungan: ${profitMargin.toFixed(1)}%`, 14, 68);
+        doc.text(`Margin: ${profitMargin.toFixed(1)}%`, 14, 62);
+
+        // Styled Laba Bersih section with background box
+        const profitColor = profit >= 0 ? [34, 197, 94] : [239, 68, 68];
+
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(226, 232, 240);
+        doc.roundedRect(14, 68, 60, 16, 2, 2, 'FD');
+
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139);
+        doc.setFont('helvetica', 'normal');
+        doc.text('LABA BERSIH', 18, 74);
+
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(profitColor[0], profitColor[1], profitColor[2]);
+        doc.text(formatCurrency(profit), 18, 80);
+
+        // Reset styles
+        doc.setTextColor(30, 41, 59);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
 
         // Add income breakdown table
         if (incomeBreakdown.length > 0) {
             doc.setFontSize(12);
             doc.setFont('helvetica', 'bold');
-            doc.text('Rincian Pendapatan', 14, 80);
+            doc.text('Rincian Pendapatan', 14, 95);
             doc.setFont('helvetica', 'normal');
 
             const incomeData = incomeBreakdown.map(([category, amount]) => [
@@ -144,7 +166,7 @@ export default function Laba({ transactions }: Props) {
             ]);
 
             autoTable(doc, {
-                startY: 85,
+                startY: 100,
                 head: [['Kategori', 'Jumlah']],
                 body: incomeData,
                 theme: 'grid',

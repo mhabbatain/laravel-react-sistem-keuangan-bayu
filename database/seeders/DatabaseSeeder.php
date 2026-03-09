@@ -45,3 +45,4 @@ class DatabaseSeeder extends Seeder
         ]);
     }
 }
+D:\PROGRAMMING\LARAVEL\laravel-react-sistem-keuangan-bayu\database\seeders\DatabaseSeeder.php

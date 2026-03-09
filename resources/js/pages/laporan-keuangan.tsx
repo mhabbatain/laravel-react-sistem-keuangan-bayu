@@ -140,12 +140,29 @@ export default function LaporanKeuangan({ transactions }: Props) {
         // Add summary
         doc.setFontSize(10);
         doc.text(`Total Kas Masuk: ${formatCurrency(totalIncome)}`, 14, 40);
-        doc.text(
-            `Total Kas Keluar: ${formatCurrency(totalExpense)}`,
-            14,
-            46,
-        );
-        doc.text(`Saldo Akhir: ${formatCurrency(finalBalance)}`, 14, 52);
+        doc.text(`Total Kas Keluar: ${formatCurrency(totalExpense)}`, 14, 46);
+
+        // Styled Saldo Akhir section with background box
+        const balanceColor = finalBalance >= 0 ? [34, 197, 94] : [239, 68, 68];
+
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(226, 232, 240);
+        doc.roundedRect(14, 52, 60, 16, 2, 2, 'FD');
+
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139);
+        doc.setFont('helvetica', 'normal');
+        doc.text('SALDO AKHIR', 18, 58);
+
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(balanceColor[0], balanceColor[1], balanceColor[2]);
+        doc.text(formatCurrency(finalBalance), 18, 64);
+
+        // Reset styles for table
+        doc.setTextColor(30, 41, 59);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
 
         // Add table
         const tableData = transactionsWithBalance.map((t) => [
@@ -158,7 +175,7 @@ export default function LaporanKeuangan({ transactions }: Props) {
         ]);
 
         autoTable(doc, {
-            startY: 60,
+            startY: 75,
             head: [
                 [
                     'Tanggal',
@@ -170,8 +187,23 @@ export default function LaporanKeuangan({ transactions }: Props) {
                 ],
             ],
             body: tableData,
+            foot: [
+                [
+                    '',
+                    '',
+                    'TOTAL',
+                    formatCurrency(totalIncome),
+                    formatCurrency(totalExpense),
+                    formatCurrency(finalBalance),
+                ],
+            ],
             theme: 'grid',
             headStyles: { fillColor: [41, 128, 185] },
+            footStyles: {
+                fillColor: [241, 245, 249],
+                textColor: [30, 41, 59],
+                fontStyle: 'bold',
+            },
             styles: { fontSize: 8 },
             columnStyles: {
                 0: { cellWidth: 25 },
@@ -184,9 +216,7 @@ export default function LaporanKeuangan({ transactions }: Props) {
         });
 
         // Save PDF
-        doc.save(
-            `laporan-keuangan-${dateRange.start}-${dateRange.end}.pdf`,
-        );
+        doc.save(`laporan-keuangan-${dateRange.start}-${dateRange.end}.pdf`);
 
         toast({
             title: 'Berhasil',
